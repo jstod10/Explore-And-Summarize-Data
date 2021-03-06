@@ -1,0 +1,488 @@
+---
+title: "Red Wine Quality Exploration"
+author: "Joseph H. Stoddard"
+date: "3/2/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, packages}
+
+# loading libraries needed for project
+
+library(ggplot2)
+library(RColorBrewer)
+library(knitr)
+library(gridExtra)
+library(tidyr)
+library(dplyr)
+library(GGally)
+library(memisc)
+library(scales)
+library(bitops)
+library(RCurl)
+
+```
+
+```{r echo=FALSE, Load_the_Data}
+setwd('C:\\Users\\josep\\OneDrive\\Desktop\\C751 - R')
+redWineInfo <- read.csv('wineQualityReds.csv')
+
+```
+
+**This report explores a dataset containing information on approximately 1600 types of red wine, including measurable attributes of each.** 
+
+# Univariate Plots Section
+
+*I started off my doing some basic queries to understand the structure of the source dataframe...*
+
+Identification of variable names:
+
+```{r echo=FALSE, Univariate_Plots}
+
+names(redWineInfo)
+
+```
+
+Query of the structure of the dataframe and identification of variable formats:
+
+```{r echo=FALSE}
+
+str(redWineInfo) 
+
+```
+
+Summary of variables with descriptive statistics:
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+summary(redWineInfo) 
+
+```
+
+
+Next, I utilized very basic plots to gain initial insights into each variable:
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+qplot(data = redWineInfo, fixed.acidity, binwidth = 1)
+qplot(data = redWineInfo, volatile.acidity)
+qplot(data = redWineInfo, citric.acid)
+qplot(data = redWineInfo, residual.sugar)
+qplot(data = redWineInfo, chlorides)
+qplot(data = redWineInfo, free.sulfur.dioxide)
+qplot(data = redWineInfo, total.sulfur.dioxide)
+qplot(data = redWineInfo, density)
+qplot(data = redWineInfo, pH)
+qplot(data = redWineInfo, sulphates)
+qplot(data = redWineInfo, alcohol)
+qplot(data = redWineInfo, quality)
+
+```
+
+**Observations and Modifications Needed**
+
+* Several peaks appear on the citric acid plot - need to adjust bin size to gain further understanding
+* A vast majority of residual sugar values occur at 4 or less - will adjust bin size and limit the x axis
+* Need to play with bin size on pH plot to attain greater detail
+* Want to eliminate outliers on alcohol content plot - will adjust x axis
+
+
+*The following are the modified plots created using the observations noted above:*
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+qplot(data = redWineInfo, citric.acid, binwidth = 0.035) + xlim(0.0, 0.8)
+
+qplot(data = redWineInfo, residual.sugar, binwidth = 0.25) + xlim(1, 7)
+
+qplot(data = redWineInfo, pH, binwidth = 0.05) +
+  xlim(2.75, 4.25)
+
+qplot(data = redWineInfo, alcohol) +
+  xlim(8, 14)
+
+```
+
+At this point I am much happier with the modified plots showing greater detail.  I used simple x-axis modifications to eliminate outliers from the initial plots, which makes them easier to understand and less "noisy".  Moving forward, I would definitely consider exploring each simple graph with greater detail. 
+
+
+
+# Univariate Analysis
+
+### What is the structure of your dataset?
+
+There are 1599 total observations in this dataset, which includes 13 different variables.  The variable 'x' is simply incremental integers representing each record in the dataset.  I was able to determine this based on the min and max values when summarizing the table.  This will be excluded from future queries. 
+
+Out of the remaining 12 variables, 11 are in number format. Only "quality" has an integer format arranged as ordered factors.  This will make things fairly straightforward when comparing or contrasting different variables, and quality will be a nice reference point for multi-variable exploration.
+
+**Random initial observations:**
+
+* A majority of the wines are rated around a 5 or 6 on the provided scale.  
+
+* The next highest rating was 7.  There were not many wines rated lower than 5 or higher than 7.  In other words, most wines were rated around or slightly above average.
+
+* The median fixed acidity is 7.90.  
+
+* The average alcohol content is 10.42%
+
+### What is/are the main feature(s) of interest in your dataset?
+
+The purpose of this exploration is to gain a greater understanding of the different factors that contribute to the overall quality of red wine.  I'd like to see if any patterns of correlation emerge when comparing acidity, residual sugar, and alcohol content to quality rating. 
+
+### What other features in the dataset do you think will help support your investigation into your feature(s) of interest?
+
+Since there are different ways to measure acidity, I want to determine how different variables related to acidity (fixed acidity, citric acid, pH) play a role in the quality rating. To further this inquiry, I would also like to see if the sugar content has any discernible effect on acidity and/or quality rating.  Finally, I want to see if it's possible to predict a quality rating based on measurements of the featured variables.
+
+### Did you create any new variables from existing variables in the dataset?
+
+At this point I did not feel a need to create any new variables.  This may change as I move forward with my analysis.
+
+*(Update: The creation of variables was necessary later on in the process.)*
+
+### Of the features you investigated, were there any unusual distributions?
+
+The chloride variable was very interesting and unusual when compared to initial explorations of the other variables.  The majority fell under 0.15 with a peak around 0.08, but since there were no major outliers and all of the entries fell within such a small range with no discernible patterns, I chose to exclude this variable from further explorations.  
+
+### Did you perform any operations on the data to tidy, adjust, or change the form of the data? If so, why did you do this?
+
+I modified 4 of the simple variable plots to "zoom in" on the plot and gain further insights through greater detail.  
+
+# Bivariate Plots Section
+
+Moving on, I wanted to take a look at pairs of variables to see if there is any discernible patterns or correlations that emerge.  I was initially concerned with how different acid values relate, if sugar content affects acidity or alcohol levels, and if there is any relationship between alcohol content and quality rating.   
+
+Once again, I will start with very simple plots to gain a rough understanding of variable relationships, then create more detailed visualizations that tell a better story of how different variables affect quality rating. 
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, Bivariate_Plots}
+# fixed acidity vs citric acid - correlation?
+
+qplot(x = citric.acid, y = fixed.acidity, data = redWineInfo )
+
+# alcohol vs quality
+
+qplot(x = alcohol, y = quality, data = redWineInfo)
+
+# residual sugar vs alcohol level
+
+qplot(x = alcohol, y = residual.sugar, data = redWineInfo )
+
+# pH vs sugar - does more sugar lead to higher pH?
+
+qplot(x = fixed.acidity, y = residual.sugar, data = redWineInfo)
+
+
+```
+
+Now that my simple queries are complete and I have a general understanding of the relationships between important variables, I'll move on to some boxplot analyses to see if any patterns emerge regarding how different aspects relate to quality ratings.
+
+*I start by creating functions for the boxplot using the median of the variables for each quality rating:*
+
+```{r echo=FALSE}
+
+box_with_dots <- function(variable){
+  ggplot(data = redWineInfo, aes_q(x = ~quality, y = as.name(variable), group = 1)) +
+    geom_boxplot() +
+    geom_jitter(width = 0.7, alpha = 1/10) +
+    geom_line(aes(group = 1),
+                  stat = "summary",
+                  fun = median,
+                  color = "#F1301E",
+                  size = 1,
+                  alpha = 0.8)
+}
+cond_median <- function(variable){
+  print(paste("Median of", variable, "by quality:"))
+  print(by(redWineInfo[[variable]], redWineInfo$quality, median))
+}
+boxplot_and_median <- function(variable){
+  cond_median(variable)
+  box_with_dots(variable)
+}
+```
+
+Now that the function is complete, I begin exploring each of the identified important variables.
+
+```{r echo=FALSE}
+
+boxplot_and_median("citric.acid")
+
+```
+
+Very strong trend here.  It appears as though there's a strong correlation between citric acid levels and quality rating.  A majority of wines rated above average (6+) measure at least 0.25 for citrus acid.
+
+
+```{r echo=FALSE}
+
+boxplot_and_median("fixed.acidity")
+
+```
+
+This was an interesting boxplot.  There appears to be a slight upward trend of fixed acidity levels as quality ratings approach average (5), but then there's a strong upward trend between ratings of 6 and 7.  However, after ratings of 7 the fixed acidity levels begin to drop lower almost as drastically as they rose around 6.  There does not appear to be any strong relationship here.
+
+
+```{r echo=FALSE}
+
+boxplot_and_median("alcohol")
+
+```
+
+This visualization shows an extremely strong correlation between alcohol levels and quality rating.  Levels hover around 10% for wines rated average or lower (5 or less).  A slight dip emerges around ratings of 5 before taking a drasitic swing upwards.  The trend continues to higher than 12% as ratings increase to 8 and above.  This would indicate to me that an alcohol content of 10% or higher is vital to having a wine rated higher than average.
+
+
+```{r echo=FALSE}
+
+boxplot_and_median("residual.sugar")
+
+```
+
+This was a flat and uninteresting plot with no discernible patterns emerging.  There does not appear to be any correlation between sugar levels and rating.
+
+
+# Bivariate Analysis
+
+
+### Talk about some of the relationships you observed in this part of the investigation. How did the feature(s) of interest vary with other features in the dataset?
+
+A strong trend emerged right away between citric acid and fixed acidity levels.  As citric acid levels rise, so does fixed acidity.  This makes sense and is not surprising.  The median citric acid level more than doubles between ratings of 4 and 5 (0.09 to 0.23) and nearly doubles again between ratings of 6 and 7 (0.26 to 0.4). 
+
+The plot I used to compare alcohol levels and quality ratings shows a strong relationship, with wines having higher alcohol levels typically being rated higher.  However, I did not like the simple plot used because it appears very confusing and doesn't tell the story right away to a casual viewer.  I will need to explore this relationship later using a more detailed plot. 
+
+I could not discern any strong relationships between residual sugar and fixed acidity or alcohol levels.
+
+### What was the strongest relationship you found?
+
+There are two possible answers to this question:
+
+1.  The relationship between citric acid and fixed acidity levels was very strong, as discussed above.  Higher citric acid levels led to higher fixed acidity. 
+
+2.  The relationship between alcohol levels and quality rating.  There was a very strong upward trend of alcohol levels (from around 10% to 12% and higher) once wines were rated average and above (5+).  I feel it's worth exploring the alcohol variable further to see if there are any other strong trends that emerge. 
+
+# Multivariate Plots Section
+
+
+I started off by creating a correlation matrix to explore all of the variables:
+
+
+```{r echo=FALSE, Multivariate_Plots}
+
+# https://github.com/zelite/Explore-and-Summarize-Data/blob/master/P4_Wine_Quality_data.rmd
+
+correlations <- as.data.frame(cor(data.frame(redWineInfo[2:12],
+                                  quality_num = as.numeric(redWineInfo$quality)),
+                                  method = "spearman")) %>%
+                tibble::rownames_to_column(var = "Var1") %>% 
+                gather(key = "Var2",
+                      value = "correlation",
+                      -Var1)
+ggplot(data = correlations, aes(x = Var1, y = Var2)) +
+  geom_tile(aes(fill = correlation)) +
+  geom_text(aes(label = round(correlation, 3)), size = 2) +
+  scale_fill_gradient2(low = "#E74C3C", mid = "white", high="#2471A3") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.2, hjust = 1))
+
+```
+
+Very helpful visualization here.  This confirms the strong correlations previously discussed between citric acid and fixed acidity, as well as alcohol levels and quality rating.
+
+
+Next, I created a scatterplot function to explore the relationships between quality rating and multiple variables:
+
+```{r echo=FALSE}
+
+scatter_with_quality_color <- function(x, y){
+ ggplot(redWineInfo, aes_q(x = as.name(x), y = as.name(y), color = as.factor(redWineInfo$quality))) +
+    geom_point(alpha = 0.8, size = 2) +
+    scale_color_brewer(type = "div", palette = "RdYlGn") +
+    labs(colour = "Quality")
+}
+
+```
+
+```{r echo=FALSE}
+
+scatter_with_quality_color("citric.acid", "alcohol")
+
+```
+
+Here you can clearly see that lower quality wines tend to have lower citric acid and alcohol content levels.  There do not appear to be any wines rated 8 that contain less than 10% alcohol. 
+
+```{r echo=FALSE}
+
+scatter_with_quality_color("citric.acid", "fixed.acidity")
+
+```
+
+Definitely shows a relationship between citric acid and fixed acidity levels but no strong correlation between these variables when compared together with quality ratings.  Higher rated wines do tend to show higher acid levels but I would not settle on acidity alone when trying to predict quality ratings.  
+
+```{r echo=FALSE}
+
+scatter_with_quality_color("pH", "residual.sugar") + scale_x_log10()
+
+```
+
+Reinforces previous finding that there doesn't seem to be any discernible relationships between quality and residual sugar or pH.
+
+```{r echo=FALSE}
+
+#ggplot(redWineInfo, aes_q(x = as.name(x), y = as.name(y), color = as.factor(redWineInfo$quality))) +
+ #   geom_point(alpha = 0.8, size = 2) +
+  #  scale_color_brewer(type = "div", palette = "RdYlGn") +
+   # labs(colour = "Quality")
+```
+
+# Multivariate Analysis
+
+### Talk about some of the relationships you observed in this part of the investigation. Were there features that strengthened each other in terms of looking at your feature(s) of interest?
+
+Right off the bat, the plots reinforced the fact that citric acid and alcohol both play a huge role in determining red wine quality.  In fact, when the first scatterplot is compared to the correlation table, the variables are ranked 1st and 3rd in terms of influencing quality rating.  Sulphates are the 2nd highest rated factor.  I would definitely explore this variable in more detail with subsequent inquires.
+
+### Were there any interesting or surprising interactions between features?
+
+The correlation table was probably the most helpful in terms of providing insight into relationships between variables.  In the future, I will most likely start here, as it was the quickest way I have found to influence what relationships I should explore and why.  
+
+### OPTIONAL: Did you create any models with your dataset? Discuss the strengths and limitations of your model.
+
+I did not create any models for this exercise.
+
+------
+
+# Final Plots and Summary
+
+
+### Plot One
+```{r echo=FALSE, Plot_One}
+
+correlations <- as.data.frame(cor(data.frame(redWineInfo[2:12],
+                                  quality_num = as.numeric(redWineInfo$quality)),
+                                  method = "spearman")) %>%
+                tibble::rownames_to_column(var = "Var1") %>% 
+                gather(key = "Var2",
+                      value = "correlation",
+                      -Var1)
+ggplot(data = correlations, aes(x = Var1, y = Var2)) +
+  geom_tile(aes(fill = correlation)) +
+  geom_text(aes(label = round(correlation, 3)), size = 2) +
+  scale_fill_gradient2(low = "#E74C3C", mid = "white", high="#2471A3") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.2, hjust = 1)) +
+  ggtitle("Correlation Between Variables") +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  labs(y = "Variable Two", x = "Variable One") 
+
+```
+
+### Description One
+
+This correlation table proved to be the most useful during this exercise.  It provided a quick and easy reference point to identify previously unidentified strong relationships and validate subsequent findings.
+
+It is quite clear that the top factors affecting quality are, in order:
+
+* Alcohol Content
+* Sulphates
+* Citric Acid
+
+
+### Plot Two
+```{r echo=FALSE, Plot_Two}
+
+box_with_dots("alcohol") +
+  ggtitle("Alcohol Content vs Quality Rating") +
+  labs(y = "Alcohol Content (%)", x = "Quality Rating (0-10, worst to best)") +
+  theme(plot.title = element_text(hjust = 0.5))
+  
+
+```
+
+### Description Two
+
+Here we can see a rather obvious correlation between alcohol content and quality ratings.  Higher rated wines tend to have a higher alcohol content (10% and up).  
+
+### Plot Three
+```{r echo=FALSE, Plot_Three}
+
+scatter_with_quality_color("citric.acid", "alcohol") +
+  ggtitle("How Citric Acid and Alcohol Levels Affect Quality") +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  labs(y = "Alchohol Content (%)", x = "Citric Acid (g/L)") 
+
+
+```
+
+### Description Three
+
+This is an excellent visualization to show the relationships between two of the strongest measurements that lead to higher quality ratings - Alcohol and Citric Acid levels.  
+
+------
+
+# Reflection
+
+*The following is a series of insights into the findings I discovered while exploring data related to red wine:* 
+
+**Insights**
+
+It is quite clear that wines rated average or higher (5+) have higher alcohol content and citric acid levels than lose rated less than average.  This is where I would start when attempting to predict quality ratings based on measurements.  I would also explore the sulphates variable further as it exhibits the 2nd strongest correlation when paired with quality ratings.  
+
+*Overall I felt this was an excellent exercise and an effective introduction to exploratory data analysis.*
+
+
+**Struggles**
+
+The biggest struggle I experienced was learning how and where to use certain visualizations.  I used a lot of references and example projects to help with this.  Of course, this approach created separate problems, as many of the examples I used included outdated code.  As such, I had to deal with a multitude of error messages.  I spent quite a bit of time trying to find solutions to the error messages.  However, this process helped me attain a greater understanding of code structure and how to troubleshoot and search for solutions when help is not readily available. 
+
+Another area of struggle related to the variables included in the dataframe.  I was not clear at first what all of the values were intended to measure and in what units.  Answering those questions required some research online to determine the best possible units of measure.  One can still make comparisons using numerical values but I would have preferred to have some sort of data indicating this. 
+
+Lastly, I struggled with time management during this project.  It was hard not to get lost in the process by getting caught up in the presented findings.  This project was a good exercise in prioritization and identification of vital steps versus a desire to explore every available avenue.
+
+
+**Things That Went Well**
+
+First of all, the source dataframe was already cleaned up and organized in a straightforward manner, which made getting started with this exercise much easier.  My intitial queries went off without a hitch and even simple plots provided valuable insights that helped me determine where to go next.  I found the usage of visualizations extremely useful in discovering patterns (especially the correlation table).  Lastly, the ability to easily attain summary statistics only serves to reinforce initial impressions both efficiently and effectively.
+
+
+**Surprising Findings**
+
+I was surprised to find that residual sugar content did not seem to play a major role in quality ratings or acidity levels.  Acid(ity) apparently influences wine quality much more drastically than I could have envisioned.  I came into the project assuming the opposite.
+
+Also, I was really stunned to see how much citric acid affects wine quality.  That variable was not on my radar when I first began this project.
+
+
+**Insights Into Future Work With This Dataset**
+
+I would obviously need to spend much more time exploring all of the variables to gain a greater understanding and determine if any other patterns emerge that would help one predict the quality rating of a wine. 
+
+In terms of more refined study, I would recommend the following inquiries:
+
+* Detailed exploration of every variable in the dataframe - *Prioritize exploration of the "chloride" variable*
+* Determine which factors affect pH
+* Answer the following: How does density play a role in quality ratings?  What factors influence red wine density?
+* Explore how chloride and sulphate levels affect quality
+* Similar exploration of white wine data.  Do the same patterns emerge when exploring white wine?
+
+
+# References:
+
+https://www.programmingr.com/r-error-messages/used-without-hex-digits-in-character-string-starting/
+https://s3.amazonaws.com/content.udacity-data.com/courses/ud651/diamondsExample_2016-05.html
+https://s3.amazonaws.com/content.udacity-data.com/courses/ud651/diamondsExample_2016-05.html
+https://www.statmethods.net/input/contents.html
+https://getnave.com/blog/frequency-distribution-types/
+https://www.jansanconsulting.com/ph-scale.html
+https://getnave.com/blog/frequency-distribution-types/
+https://waterhouse.ucdavis.edu/whats-in-wine/fixed-acidity
+https://rmarkdown.rstudio.com/lesson-8.html
+https://github.com/igorstojanovic91/udacity-explore-and-summarize-data/blob/master/Project%20EDA%20Igor%20Stojanovic.rmd
+https://stackoverflow.com/questions/30959839/error-r-studio-knit-html-with-install-packages-line
+https://www.datacamp.com/community/tutorials/make-histogram-ggplot2#qplot
+https://bookdown.org/yihui/rmarkdown/r-code.html
+https://ggplot2.tidyverse.org/reference/lims.html
+https://github.com/zelite/Explore-and-Summarize-Data/blob/master/P4_Wine_Quality_data.rmd
+https://stackoverflow.com/questions/51190612/what-does-continuous-x-aesthetic-did-you-forget-aesgroup-mean
+https://htmlcolorcodes.com/
+https://stackoverflow.com/questions/56757997/r-plotly-error-in-unique-defaultx-unique-applies-only-to-vectors
+https://datavizpyr.com/color-scatter-plot-by-variable-in-r-with-ggplot2/
+https://stackoverflow.com/questions/14622421/how-to-change-legend-title-in-ggplot
+https://stackoverflow.com/questions/40675778/center-plot-title-in-ggplot2
+http://environmentalcomputing.net/plotting-with-ggplot-adding-titles-and-axis-names/
